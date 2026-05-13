@@ -1071,6 +1071,11 @@
     }
   },
   "ethereum": {
+    "0xF7D85EC4E7710f71992752eac2111312e73E9C9C": {
+      "decimals": "6",
+      "symbol": "ftUSD",
+      "to": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
     "0x4fdb3cb3DBD6D24B64276645c1ADCb85cbB39dC6": {
       "decimals": "18",
       "symbol": "sd-FrxMsUSD-vault",
@@ -12717,6 +12722,11 @@
     }
   },
   "sonic": {
+    "0xF7D85EC4E7710f71992752eac2111312e73E9C9C": {
+      "decimals": "6",
+      "symbol": "ftUSD",
+      "to": "sonic:0x29219dd400f2bf60e5a23d13be72b486d4038894"
+    },
     "0x6202B9f02E30E5e1c62Cc01E4305450E5d83b926": {
       "to": "coingecko#staked-stream-usd",
       "decimals": 6,
