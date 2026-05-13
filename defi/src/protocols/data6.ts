@@ -1097,7 +1097,7 @@ const data6: Protocol[] = [
     address: null,
     symbol: "-",
     url: "https://flyingtulip.com/",
-    description: "ftUSD is a yield-bearing stablecoin backed by USDC, USDT and ftUSD-wrapped collateral deployed via MintAndRedeem into Aave yield strategies. Holders can stake into sftUSD to earn FT rewards funded by protocol fees that buy FT on the open market.",
+    description: "ftUSD is a stablecoin backed by USDC, USDT and ftUSD-wrapped collateral deployed via MintAndRedeem into Aave yield strategies. Holders can stake into sftUSD (the yield-bearing form) to earn FT rewards funded by protocol fees that buy FT on the open market.",
     chain: "Ethereum",
     logo: `${baseIconsUrl}/flying-tulip-ftusd.jpg`,
     audits: "2",
