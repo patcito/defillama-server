@@ -1074,7 +1074,7 @@
     "0xF7D85EC4E7710f71992752eac2111312e73E9C9C": {
       "decimals": "6",
       "symbol": "ftUSD",
-      "to": "coingecko:flying-tulip-usd"
+      "to": "coingecko#flying-tulip-usd"
     },
     "0x4fdb3cb3DBD6D24B64276645c1ADCb85cbB39dC6": {
       "decimals": "18",
@@ -12725,7 +12725,7 @@
     "0xF7D85EC4E7710f71992752eac2111312e73E9C9C": {
       "decimals": "6",
       "symbol": "ftUSD",
-      "to": "coingecko:flying-tulip-usd"
+      "to": "coingecko#flying-tulip-usd"
     },
     "0x6202B9f02E30E5e1c62Cc01E4305450E5d83b926": {
       "to": "coingecko#staked-stream-usd",
