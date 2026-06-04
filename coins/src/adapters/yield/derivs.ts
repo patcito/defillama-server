@@ -1,4 +1,6 @@
-import { runInPromisePool } from "@defillama/sdk/build/generalUtil";
+
+import * as sdk from '@defillama/sdk'
+const { runInPromisePool } = sdk.util;
 import { getCurrentUnixTimestamp } from "../../utils/date";
 import { nullAddress } from "../../utils/shared/constants";
 import { Write } from "../utils/dbInterfaces";
@@ -15,7 +17,7 @@ type Config = {
   confidence?: number;
 };
 
-const configs: { [adapter: string]: Config } = {
+export const configs: { [adapter: string]: Config } = {
   osETH: {
     rate: async ({ api }) => {
       const raw = await api.call({
@@ -45,13 +47,7 @@ const configs: { [adapter: string]: Config } = {
     rate: async ({ api }) => {
       const raw = await api.call({
         target: "0xe2de616fbd8cb9180b26fcfb1b761a232fe56717",
-        abi: {
-          inputs: [],
-          name: "stMTRGPerToken",
-          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-          stateMutability: "view",
-          type: "function",
-        },
+        abi: 'uint256:stMTRGPerToken',
       });
       return raw / 10 ** 18;
     },
@@ -796,7 +792,10 @@ const configs: { [adapter: string]: Config } = {
         abi: "function shareValue() view returns (uint256 value, uint256 timestamp)",
         target: "0x04E5a6f7eE9977D38f57945c31B72178c9Cf1c06",
       });
-      if (rate.timestamp < api.timestamp - 3 * 60 * 60)
+      // OALS2T's shareValue() NAV updates ~daily, not intraday. A 3h window
+      // rejected it ~21h/day and left onChainMcap blank. 27h matches the
+      // house default (DEFAULT_MAX_ORACLE_AGE_SECONDS) and tolerates the cadence.
+      if (rate.timestamp < api.timestamp - 27 * 60 * 60)
         throw new Error(`OALS2T stale rate`);
       return rate.value / 1e18;
     },
@@ -891,45 +890,6 @@ const configs: { [adapter: string]: Config } = {
     underlying: "0x1aad217b8f78dba5e6693460e8470f8b1a3977f3",
     address: "0x546E01d65f2B1C64C657bD69Ce00f8584Ed798cc",
   },
-  iTRY: {
-    rate: async ({ api }) => {
-      const [navPrice, navUpdatedAt, tryUsd] = await Promise.all([
-        api.call({
-          abi: "uint256:price",
-          target: "0xa5b6f7404D960BaC4075EcAEc31E37B940c2A145",
-        }),
-        api.call({
-          abi: "uint256:updatedAt",
-          target: "0xa5b6f7404D960BaC4075EcAEc31E37B940c2A145",
-        }),
-        api.call({
-          abi: "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
-          target: "0xB09fC5fD3f11Cf9eb5E1C5Dba43114e3C9f477b5",
-        }),
-      ]);
-      if (navUpdatedAt < api.timestamp - 14 * 24 * 60 * 60)
-        throw new Error(`iTRY NAV stale rate`);
-      if (tryUsd.updatedAt < api.timestamp - 24 * 60 * 60)
-        throw new Error(`TRY/USD stale rate`);
-      return (navPrice / 1e18) * (tryUsd.answer / 1e8);
-    },
-    chain: "ethereum",
-    underlying: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    address: "0xb492B4aFD9658093694CF9452D5C272e8230F3B0",
-  },
-  wiTRY: {
-    rate: async ({ api }) => {
-      const rate = await api.call({
-        abi: "function convertToAssets(uint256) external view returns (uint256)",
-        target: "0xE346C29b5B60Ef870b9724c57ccfbBc631e47DEE",
-        params: 1e12,
-      });
-      return rate / 1e12;
-    },
-    chain: "ethereum",
-    underlying: "0xb492B4aFD9658093694CF9452D5C272e8230F3B0",
-    address: "0xE346C29b5B60Ef870b9724c57ccfbBc631e47DEE",
-  },
   USDnr: {
     rate: async ({ api }) => {
       const m = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"
@@ -973,7 +933,47 @@ const configs: { [adapter: string]: Config } = {
     chain: "ethereum",
     underlying: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
     address: "0x6aD038cA6C04e885630851278ca0a856Ad9a66Cc",
-  }
+  },
+  sUSDai: {
+    // totalAssets() on this vault reports the assets backing every chain
+    // deployment, not just Arbitrum, so the standard 4626 path
+    // (totalAssets/totalSupply) over-states the rate. convertToAssets gives
+    // the correct per-chain share->asset rate.
+    rate: async ({ api }) => {
+      const rate = await api.call({
+        abi: "function convertToAssets(uint256) external view returns (uint256)",
+        target: "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+        params: [1e10],
+      });
+      return rate / 1e10;
+    },
+    chain: "arbitrum",
+    underlying: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF", // USDai
+    address: "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+    // 1.01 > 1 so this convertToAssets price beats the stale meta-morphos
+    // (totalAssets/totalSupply, confidence 1) records that pollute history.
+    // NOTE: this does NOT override the bridges SK=0 redirect to coingecko#usdai
+    // — that is a direct put and must be removed from tokenMapping.json instead.
+    confidence: 1.01,
+  },
+  sUSDnr: {
+    rate: async ({ api }) => {
+      const [assets, supply] = await Promise.all([
+        api.call({
+          abi: "function getTotalAssets() view returns (uint256)",
+          target: "0x50ae83dbdc44208eda1ef722f87bab0ffb195eea",
+        }),
+        api.call({
+          abi: "erc20:totalSupply",
+          target: "0xfa9b3b45587f9fcde14759121c3868c2733dcbf4",
+        }),
+      ]);
+      return assets / supply;
+    },
+    chain: "fluent",
+    underlying: "0xD48e565561416dE59DA1050ED70b8d75e8eF28f9",
+    address: "0xfa9b3b45587f9fcde14759121c3868c2733dcbf4",
+  },
 };
 
 export async function derivs(timestamp: number) {
@@ -995,7 +995,7 @@ export async function derivs(timestamp: number) {
   return writes
 }
 
-async function deriv(timestamp: number, projectName: string, config: Config) {
+export async function deriv(timestamp: number, projectName: string, config: Config) {
   const { chain, underlying, address, symbol, decimals, confidence } = config;
   let t = timestamp == 0 ? getCurrentUnixTimestamp() : timestamp;
   const api = await getApi(chain, t, true);
